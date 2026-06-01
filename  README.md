@@ -103,9 +103,6 @@
 
 ---
 
-
----
-
 ## 📸 Screenshots
 
 <div align="center">
@@ -128,7 +125,7 @@
   <img src="screenshots/ScanHistory.png" alt="Analytics" width="800"/>
   
   <h3>PDF Report</h3>
-  <img src="screenshots/Scanning.png" alt="PDF Report" width="800"/>
+  <img src="screenshots/Scanning.png" alt="" width="800"/>
 </div>
 
 ---
