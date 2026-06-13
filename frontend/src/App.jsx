@@ -14,6 +14,7 @@ import MainLayout from "./layouts/MainLayout";
 import TeamChat from "./components/TeamChat";
 import { Toaster } from "react-hot-toast";
 import { NotificationProvider } from "./context/NotificationContext";
+import RepoScanner from "./components/RepoScanner";
 
 const App = () => {
   const token = localStorage.getItem("token");
@@ -55,6 +56,7 @@ const App = () => {
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/teams" element={<Teams />} />
             <Route path="/team-chat/:id" element={<TeamChat />} />
+            <Route path="/scanner" element={<RepoScanner />} />
           </Route>
 
           {/* FALLBACK */}
