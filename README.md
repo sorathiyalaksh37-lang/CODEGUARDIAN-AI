@@ -16,7 +16,7 @@
     <img src="https://img.shields.io/badge/license-MIT-green" alt="License"/>
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs Welcome"/>
     <img src="https://img.shields.io/badge/status-stable-success" alt="Status"/>
-  </p>
+  </p> 
 </div>
 
 ---
