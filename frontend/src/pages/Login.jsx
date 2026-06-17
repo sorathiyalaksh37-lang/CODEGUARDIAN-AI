@@ -34,8 +34,14 @@ const Login = () => {
         toast.error(data.message || "Login failed");
       }
     } catch (error) {
-      console.log("Login error:", error);
-      toast.error(error.response?.data?.message || "Login failed. Please try again.");
+      console.error("Login error:", error);
+      const message = error.response?.data?.message || "Login failed. Please try again.";
+      toast.error(message);
+      
+      // If email not found or wrong password
+      if (error.response?.status === 400) {
+        toast.error("Invalid credentials. Please check your email and password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -47,22 +53,18 @@ const Login = () => {
       <div className="absolute top-[-200px] left-[-200px] w-[500px] h-[500px] bg-green-500/20 blur-3xl rounded-full" />
       <div className="absolute bottom-[-200px] right-[-200px] w-[500px] h-[500px] bg-blue-500/20 blur-3xl rounded-full" />
 
-      {/* Card */}
       <div className="relative z-10 w-full max-w-md bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-10 shadow-2xl">
-        {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="w-20 h-20 rounded-3xl bg-green-500 flex items-center justify-center">
             <FaShieldAlt className="text-4xl text-black" />
           </div>
         </div>
 
-        {/* Title */}
         <h1 className="text-5xl font-black text-center">Welcome Back</h1>
         <p className="text-zinc-400 text-center mt-4">
           Login to continue using CodeGuardian AI
         </p>
 
-        {/* Form */}
         <form onSubmit={handleLogin} className="mt-10">
           <div className="mb-5">
             <label className="text-zinc-400">Email</label>
@@ -97,14 +99,13 @@ const Login = () => {
           </button>
         </form>
 
-        {/* Divider */}
         <div className="flex items-center gap-4 my-8">
           <div className="flex-1 h-[1px] bg-zinc-700" />
           <p className="text-zinc-500">OR</p>
           <div className="flex-1 h-[1px] bg-zinc-700" />
         </div>
 
-        {/* GitHub Login */}
+        {/* GitHub Login - Fixed with proper URL */}
         <a
           href="http://localhost:8000/api/auth/github"
           className="w-full flex items-center justify-center gap-4 bg-white hover:bg-zinc-200 text-black py-4 rounded-2xl font-bold transition-all"
@@ -113,7 +114,6 @@ const Login = () => {
           Continue with GitHub
         </a>
 
-        {/* Register Link */}
         <p className="text-center text-zinc-400 mt-10">
           Don't have an account?
           <Link to="/register" className="text-green-400 ml-2 font-bold">
