@@ -24,6 +24,7 @@ import aiFixRoutes from "./routes/aiFixRoutes.js";
 import oauthRoutes from "./routes/oauthRoutes.js";
 import teamRoutes from "./routes/teamRoutes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import securityRoutes from "./routes/securityRoutes.js";
 
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./config/swagger.js";
@@ -98,6 +99,11 @@ app.use(
 app.use(
     "/api/chat",
     chatRoutes
+);
+
+app.use(
+    "/api/security",
+    securityRoutes
 );
 
 /* SWAGGER */
