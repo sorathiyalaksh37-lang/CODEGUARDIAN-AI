@@ -1,22 +1,41 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { FaCode, FaBug, FaShieldAlt, FaCopy, FaCheck, FaMagic, FaGithub } from "react-icons/fa";
+import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
+import {
+  CodeBracketIcon,
+  ShieldCheckIcon,
+  SparklesIcon,
+  DocumentDuplicateIcon,
+  CheckIcon,
+  ExclamationTriangleIcon,
+  LightBulbIcon,
+} from "@heroicons/react/24/outline";
+import { FaGithub } from "react-icons/fa";
+import AnimatedCard from "../components/AnimatedCard";
+import GlowButton from "../components/GlowButton";
+import SeverityBadge from "../components/SeverityBadge";
+import LoadingSpinner from "../components/LoadingSpinner";
 
 const CodeFixer = () => {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [activeTab, setActiveTab] = useState("code");
   const [repoUrl, setRepoUrl] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
 
   const token = localStorage.getItem("token");
 
-  // EXAMPLE VULNERABLE CODE SNIPPETS
-  const examples = {
-    sqlInjection: `// VULNERABLE SQL QUERY
+  // Example vulnerable code snippets
+  const examples = [
+    {
+      name: "SQL Injection",
+      type: "sqlInjection",
+      color: "from-red-500 to-pink-600",
+      code: `// VULNERABLE SQL QUERY
 const getUser = (req, res) => {
   const id = req.params.id;
   // DANGER: SQL Injection vulnerability!
@@ -25,14 +44,22 @@ const getUser = (req, res) => {
     res.json(result);
   });
 };`,
-
-    xssVulnerability: `// VULNERABLE XSS CODE
+    },
+    {
+      name: "XSS Attack",
+      type: "xssVulnerability",
+      color: "from-yellow-500 to-orange-600",
+      code: `// VULNERABLE XSS CODE
 const displayMessage = (message) => {
   // DANGER: XSS vulnerability!
   document.getElementById('output').innerHTML = message;
 };`,
-
-    hardcodedPassword: `// VULNERABLE HARDCODED PASSWORD
+    },
+    {
+      name: "Hardcoded Password",
+      type: "hardcodedPassword",
+      color: "from-orange-500 to-red-600",
+      code: `// VULNERABLE HARDCODED PASSWORD
 const authenticate = (req, res) => {
   const password = req.body.password;
   // DANGER: Hardcoded credentials!
@@ -40,25 +67,29 @@ const authenticate = (req, res) => {
     res.json({ success: true });
   }
 };`,
-
-    evalUsage: `// VULNERABLE EVAL USAGE
+    },
+    {
+      name: "Eval Usage",
+      type: "evalUsage",
+      color: "from-purple-500 to-pink-600",
+      code: `// VULNERABLE EVAL USAGE
 const calculate = (expression) => {
   // DANGER: Code injection risk!
   return eval(expression);
 };`,
-  };
+    },
+  ];
 
-  // LOAD EXAMPLE
-  const loadExample = (type) => {
-    setCode(examples[type]);
+  const loadExample = (example) => {
+    setCode(example.code);
     setResult(null);
-    toast.success(`Loaded ${type} example`);
+    setActiveTab("code");
+    toast.success(`Loaded ${example.name} example`);
   };
 
-  // FIX CODE WITH AI
   const handleFix = async () => {
     if (!code.trim()) {
-      toast.error("Please enter code to fix");
+      toast.error("Please enter code to analyze");
       return;
     }
 
@@ -69,36 +100,36 @@ const calculate = (expression) => {
       const response = await axios.post(
         "http://localhost:8000/api/aifix/fix",
         { code },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setResult(response.data.result);
       toast.success("AI Analysis Complete!");
     } catch (error) {
       console.error(error);
-      toast.error("Failed to analyze code. Please try again.");
-      
-      // FALLBACK RESULT (for demo if API fails)
+      toast.error("Analysis failed. Showing demo results.");
+
+      // Fallback demo result
       setResult({
-        vulnerability: "Potential Security Issue Detected",
+        vulnerability: "Security Vulnerability Detected",
         severity: "High",
         explanation: "This code contains patterns that could lead to security vulnerabilities including injection attacks, XSS, or insecure data handling.",
-        fixedCode: code.replace(/eval\(/g, "// Removed eval for security\n  safeExecute("),
+        fixedCode: code.includes("eval") 
+          ? code.replace(/eval\(/g, "// FIXED: Removed eval for security\n  // safeExecute(")
+          : code.replace(/innerHTML/g, "textContent"),
         recommendations: [
           "Use parameterized queries instead of string concatenation",
           "Implement input validation and sanitization",
           "Never hardcode credentials in source code",
-          "Use textContent instead of innerHTML",
-        ]
+          "Use textContent instead of innerHTML for user-generated content",
+          "Apply the principle of least privilege",
+        ],
       });
     } finally {
       setLoading(false);
     }
   };
 
-  // COPY FIXED CODE
   const copyCode = () => {
     if (result?.fixedCode) {
       navigator.clipboard.writeText(result.fixedCode);
@@ -108,7 +139,6 @@ const calculate = (expression) => {
     }
   };
 
-  // SCAN GITHUB REPOSITORY
   const handleScanRepo = async (e) => {
     e.preventDefault();
     if (!repoUrl.trim()) {
@@ -123,30 +153,28 @@ const calculate = (expression) => {
       const response = await axios.post(
         "http://localhost:8000/api/github/scan",
         { repoUrl },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
 
       setScanResult(response.data);
       toast.success(`Scanned ${response.data.scannedFiles} files!`);
     } catch (error) {
       console.error(error);
-      toast.error("Scan failed. Please check the repository URL.");
-      
-      // DEMO SCAN RESULT (for LinkedIn screenshots)
+      toast.error("Scan failed. Showing demo results.");
+
+      // Demo scan result
       setScanResult({
         owner: "example",
         repo: "demo-repo",
-        scannedFiles: 15,
-        overallScore: 72,
+        scannedFiles: 24,
+        overallScore: 68,
         riskLevel: "Medium",
-        severityBreakdown: { Critical: 1, High: 3, Medium: 5, Low: 6 },
+        severityBreakdown: { Critical: 2, High: 5, Medium: 8, Low: 9 },
         reports: [
-          { fileName: "auth.js", severity: "High", review: "JWT secret exposed", fixes: ["Use environment variables"] },
-          { fileName: "db.js", severity: "Critical", review: "SQL injection risk", fixes: ["Use parameterized queries"] },
-          { fileName: "app.js", severity: "Medium", review: "XSS vulnerability", fixes: ["Sanitize user input"] },
-        ]
+          { fileName: "src/auth/jwt.js", severity: "Critical", review: "JWT secret exposed in source code" },
+          { fileName: "src/db/query.js", severity: "High", review: "SQL injection vulnerability detected" },
+          { fileName: "src/api/users.js", severity: "Medium", review: "Missing rate limiting on auth endpoint" },
+        ],
       });
     } finally {
       setScanning(false);
@@ -155,221 +183,346 @@ const calculate = (expression) => {
 
   return (
     <div className="min-h-screen bg-black text-white p-6 md:p-10">
-      {/* HEADER */}
-      <div className="mb-10 text-center">
-        <div className="inline-block p-4 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-3xl mb-4">
-          <FaMagic className="text-5xl text-green-400" />
-        </div>
-        <h1 className="text-5xl md:text-6xl font-black bg-gradient-to-r from-green-400 to-blue-500 bg-clip-text text-transparent">
-          AI Code Fixer
-        </h1>
-        <p className="text-zinc-400 mt-3 text-lg max-w-2xl mx-auto">
-          Paste vulnerable code and let AI detect security issues with instant fixes
-        </p>
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* LEFT PANEL - INPUT */}
-        <div className="space-y-6">
-          {/* EXAMPLE BUTTONS */}
-          <div className="bg-zinc-900 rounded-2xl p-4 border border-zinc-800">
-            <h3 className="text-sm text-zinc-400 mb-3">📋 Example Vulnerable Code</h3>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={() => loadExample("sqlInjection")} className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30">
-                SQL Injection
-              </button>
-              <button onClick={() => loadExample("xssVulnerability")} className="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 rounded-lg text-sm hover:bg-yellow-500/30">
-                XSS Attack
-              </button>
-              <button onClick={() => loadExample("hardcodedPassword")} className="px-3 py-1.5 bg-orange-500/20 text-orange-400 rounded-lg text-sm hover:bg-orange-500/30">
-                Hardcoded Password
-              </button>
-              <button onClick={() => loadExample("evalUsage")} className="px-3 py-1.5 bg-purple-500/20 text-purple-400 rounded-lg text-sm hover:bg-purple-500/30">
-                Eval Usage
-              </button>
-            </div>
-          </div>
-
-          {/* CODE INPUT */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl overflow-hidden">
-            <div className="bg-zinc-950 px-5 py-3 border-b border-zinc-800 flex justify-between items-center">
-              <div className="flex items-center gap-2">
-                <FaCode className="text-green-400" />
-                <span className="font-mono text-sm">vulnerable-code.js</span>
-              </div>
-              <span className="text-xs text-zinc-500">AI will analyze this code</span>
-            </div>
-            <textarea
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder='// Paste your vulnerable code here...
-// Example: 
-// const query = `SELECT * FROM users WHERE id = ${userId}`;'
-              className="w-full h-[400px] bg-black p-5 font-mono text-sm outline-none resize-none text-zinc-300"
-            />
-            <div className="p-4 border-t border-zinc-800">
-              <button
-                onClick={handleFix}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-black font-bold py-4 rounded-2xl flex items-center justify-center gap-3 transition-all disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Analyzing Code...
-                  </>
-                ) : (
-                  <>
-                    <FaMagic />
-                    Generate Secure Fix
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* RIGHT PANEL - OUTPUT */}
-        <div className="space-y-6">
-          {result && (
-            <>
-              {/* VULNERABILITY CARD */}
-              <div className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border border-red-500/30 rounded-2xl p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-                    <FaBug className="text-red-400 text-xl" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-lg">Vulnerability Detected</h3>
-                    <p className="text-red-400 font-mono text-sm">{result.vulnerability || "Security Issue Found"}</p>
-                  </div>
-                  <span className="ml-auto px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-xs font-bold">
-                    {result.severity || "HIGH"}
-                  </span>
-                </div>
-                <p className="text-zinc-300 leading-relaxed">{result.explanation}</p>
-              </div>
-
-              {/* FIXED CODE CARD */}
-              <div className="bg-zinc-900 border border-green-500/30 rounded-2xl overflow-hidden">
-                <div className="bg-zinc-950 px-5 py-3 border-b border-zinc-800 flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <FaShieldAlt className="text-green-400" />
-                    <span className="font-mono text-sm">secure-fixed-code.js</span>
-                  </div>
-                  <button
-                    onClick={copyCode}
-                    className="flex items-center gap-2 px-3 py-1.5 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-lg transition-all text-sm"
-                  >
-                    {copied ? <FaCheck /> : <FaCopy />}
-                    {copied ? "Copied!" : "Copy"}
-                  </button>
-                </div>
-                <pre className="bg-black p-5 overflow-x-auto max-h-[300px]">
-                  <code className="text-sm text-green-300 font-mono whitespace-pre-wrap">
-                    {result.fixedCode}
-                  </code>
-                </pre>
-              </div>
-
-              {/* RECOMMENDATIONS */}
-              {result.recommendations && (
-                <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5">
-                  <h4 className="font-bold text-blue-400 mb-3">📌 Security Recommendations</h4>
-                  <ul className="space-y-2">
-                    {result.recommendations.map((rec, idx) => (
-                      <li key={idx} className="flex items-start gap-2 text-zinc-300 text-sm">
-                        <span className="text-green-400">✓</span>
-                        {rec}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </>
-          )}
-
-          {!result && !loading && (
-            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-10 text-center">
-              <FaMagic className="text-6xl text-zinc-700 mx-auto mb-4" />
-              <p className="text-zinc-500">Enter vulnerable code above</p>
-              <p className="text-zinc-600 text-sm mt-2">AI will detect and fix security issues</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* GITHUB REPOSITORY SCANNER SECTION */}
-      <div className="mt-12 bg-gradient-to-r from-blue-500/10 to-purple-500/10 border border-blue-500/30 rounded-3xl p-8">
-        <div className="flex items-center gap-4 mb-6">
-          <FaGithub className="text-4xl text-white" />
-          <div>
-            <h2 className="text-2xl font-bold">Scan GitHub Repository</h2>
-            <p className="text-zinc-400 text-sm">AI-powered security scan for any public repository</p>
-          </div>
-        </div>
-
-        <form onSubmit={handleScanRepo} className="flex flex-col md:flex-row gap-4">
-          <input
-            type="text"
-            placeholder="https://github.com/owner/repository"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            className="flex-1 bg-black border border-zinc-700 rounded-2xl px-5 py-4 outline-none focus:border-green-500"
-          />
-          <button
-            type="submit"
-            disabled={scanning}
-            className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-bold px-8 py-4 rounded-2xl transition-all disabled:opacity-50"
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-10"
+        >
+          <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ type: "spring", stiffness: 200, damping: 15 }}
+            className="inline-block p-4 bg-gradient-to-br from-pink-500/20 to-purple-500/20 rounded-3xl mb-6"
           >
-            {scanning ? "Scanning..." : "Scan Repository"}
+            <SparklesIcon className="w-16 h-16 text-pink-400" />
+          </motion.div>
+          <h1 className="text-5xl md:text-6xl font-black mb-4">
+            <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-blue-500 bg-clip-text text-transparent">
+              AI Code Fixer
+            </span>
+          </h1>
+          <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
+            Paste vulnerable code and get instant AI-powered security analysis with automated fixes
+          </p>
+        </motion.div>
+
+        {/* Tabs */}
+        <div className="flex gap-4 mb-8 border-b border-zinc-800">
+          <button
+            onClick={() => setActiveTab("code")}
+            className={`px-6 py-3 font-semibold transition-all ${
+              activeTab === "code"
+                ? "text-pink-400 border-b-2 border-pink-400"
+                : "text-zinc-500 hover:text-white"
+            }`}
+          >
+            <CodeBracketIcon className="w-5 h-5 inline mr-2" />
+            Code Analysis
           </button>
-        </form>
+          <button
+            onClick={() => setActiveTab("repo")}
+            className={`px-6 py-3 font-semibold transition-all ${
+              activeTab === "repo"
+                ? "text-blue-400 border-b-2 border-blue-400"
+                : "text-zinc-500 hover:text-white"
+            }`}
+          >
+            <FaGithub className="inline mr-2" />
+            Repository Scanner
+          </button>
+        </div>
 
-        {/* SCAN RESULTS */}
-        {scanResult && (
-          <div className="mt-6 p-5 bg-black/50 rounded-2xl">
-            <div className="flex justify-between items-center mb-4">
-              <div>
-                <h3 className="font-bold text-lg">{scanResult.owner}/{scanResult.repo}</h3>
-                <p className="text-zinc-500 text-sm">{scanResult.scannedFiles} files scanned</p>
+        {/* Code Analysis Tab */}
+        {activeTab === "code" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-8"
+          >
+            {/* Example Buttons */}
+            <AnimatedCard delay={0.1}>
+              <h3 className="text-sm font-semibold text-zinc-400 mb-4 flex items-center gap-2">
+                <LightBulbIcon className="w-5 h-5 text-yellow-400" />
+                Example Vulnerable Code Snippets
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {examples.map((example, index) => (
+                  <motion.button
+                    key={index}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 + index * 0.05 }}
+                    whileHover={{ scale: 1.05, y: -2 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => loadExample(example)}
+                    className={`px-4 py-3 bg-gradient-to-r ${example.color} bg-opacity-10 hover:bg-opacity-20 rounded-xl text-sm font-semibold transition-all border border-white/10`}
+                  >
+                    {example.name}
+                  </motion.button>
+                ))}
               </div>
-              <div className="text-right">
-                <p className="text-sm text-zinc-400">Security Score</p>
-                <p className={`text-3xl font-bold ${scanResult.overallScore >= 70 ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {scanResult.overallScore}
-                </p>
-              </div>
-            </div>
-            
-            {/* Severity Badges */}
-            <div className="flex flex-wrap gap-3 mb-4">
-              {scanResult.severityBreakdown?.Critical > 0 && (
-                <span className="px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-sm">Critical: {scanResult.severityBreakdown.Critical}</span>
-              )}
-              {scanResult.severityBreakdown?.High > 0 && (
-                <span className="px-3 py-1 bg-orange-500/20 text-orange-400 rounded-full text-sm">High: {scanResult.severityBreakdown.High}</span>
-              )}
-              {scanResult.severityBreakdown?.Medium > 0 && (
-                <span className="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm">Medium: {scanResult.severityBreakdown.Medium}</span>
-              )}
-              {scanResult.severityBreakdown?.Low > 0 && (
-                <span className="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm">Low: {scanResult.severityBreakdown.Low}</span>
-              )}
-            </div>
+            </AnimatedCard>
 
-            {/* Top Vulnerabilities */}
-            <div className="space-y-2">
-              <p className="text-sm text-zinc-400 font-bold">Top Issues Found:</p>
-              {scanResult.reports?.slice(0, 3).map((report, idx) => (
-                <div key={idx} className="flex items-center gap-3 text-sm">
-                  <span className={`w-2 h-2 rounded-full ${report.severity === 'Critical' ? 'bg-red-500' : report.severity === 'High' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
-                  <span className="text-zinc-300">{report.fileName}</span>
-                  <span className="text-zinc-500 text-xs">{report.review?.substring(0, 60)}...</span>
+            <div className="grid lg:grid-cols-2 gap-8">
+              {/* Input Panel */}
+              <AnimatedCard delay={0.2} gradient>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CodeBracketIcon className="w-5 h-5 text-red-400" />
+                      <span className="font-mono text-sm">vulnerable-code.js</span>
+                    </div>
+                    <span className="text-xs text-zinc-500">Enter code to analyze</span>
+                  </div>
+
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder='// Paste your vulnerable code here...
+// Example: 
+const query = `SELECT * FROM users WHERE id = ${userId}`;'
+                    className="w-full h-[400px] bg-black/50 border border-zinc-800 rounded-xl p-4 font-mono text-sm outline-none resize-none text-zinc-300 focus:border-pink-500/50 transition-all"
+                  />
+
+                  <GlowButton
+                    fullWidth
+                    variant="primary"
+                    onClick={handleFix}
+                    disabled={loading}
+                    icon={loading ? null : <SparklesIcon />}
+                  >
+                    {loading ? (
+                      <div className="flex items-center gap-3">
+                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Analyzing Code...
+                      </div>
+                    ) : (
+                      "Generate Secure Fix"
+                    )}
+                  </GlowButton>
                 </div>
-              ))}
+              </AnimatedCard>
+
+              {/* Output Panel */}
+              <div className="space-y-6">
+                <AnimatePresence mode="wait">
+                  {loading && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="flex justify-center items-center h-full"
+                    >
+                      <LoadingSpinner size="lg" text="AI is analyzing your code..." />
+                    </motion.div>
+                  )}
+
+                  {!loading && result && (
+                    <motion.div
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      className="space-y-6"
+                    >
+                      {/* Vulnerability Card */}
+                      <AnimatedCard gradient className="bg-gradient-to-r from-red-500/10 to-orange-500/10 border-red-500/30">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="p-3 bg-red-500/20 rounded-2xl">
+                            <ExclamationTriangleIcon className="w-6 h-6 text-red-400" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="font-bold text-lg mb-2">{result.vulnerability}</h3>
+                            <SeverityBadge severity={result.severity} size="md" />
+                          </div>
+                        </div>
+                        <p className="text-zinc-300 leading-relaxed">{result.explanation}</p>
+                      </AnimatedCard>
+
+                      {/* Fixed Code */}
+                      <AnimatedCard gradient className="border-green-500/30">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheckIcon className="w-5 h-5 text-green-400" />
+                            <span className="font-mono text-sm">secure-fixed-code.js</span>
+                          </div>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={copyCode}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-500/20 hover:bg-green-500 text-green-400 hover:text-white rounded-xl transition-all text-sm font-semibold"
+                          >
+                            {copied ? (
+                              <>
+                                <CheckIcon className="w-4 h-4" />
+                                Copied!
+                              </>
+                            ) : (
+                              <>
+                                <DocumentDuplicateIcon className="w-4 h-4" />
+                                Copy
+                              </>
+                            )}
+                          </motion.button>
+                        </div>
+                        <pre className="bg-black/50 rounded-xl p-4 overflow-x-auto max-h-[300px] border border-zinc-800">
+                          <code className="text-sm text-green-300 font-mono whitespace-pre-wrap">
+                            {result.fixedCode}
+                          </code>
+                        </pre>
+                      </AnimatedCard>
+
+                      {/* Recommendations */}
+                      {result.recommendations && (
+                        <AnimatedCard gradient>
+                          <h4 className="font-bold text-blue-400 mb-4 flex items-center gap-2">
+                            <LightBulbIcon className="w-5 h-5" />
+                            Security Recommendations
+                          </h4>
+                          <ul className="space-y-3">
+                            {result.recommendations.map((rec, idx) => (
+                              <motion.li
+                                key={idx}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: idx * 0.1 }}
+                                className="flex items-start gap-3 text-zinc-300 text-sm"
+                              >
+                                <CheckIcon className="w-5 h-5 text-green-400 flex-shrink-0 mt-0.5" />
+                                <span>{rec}</span>
+                              </motion.li>
+                            ))}
+                          </ul>
+                        </AnimatedCard>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {!loading && !result && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex flex-col items-center justify-center h-full text-center py-20"
+                    >
+                      <SparklesIcon className="w-24 h-24 text-zinc-700 mb-6" />
+                      <p className="text-zinc-500 text-lg">Enter vulnerable code above</p>
+                      <p className="text-zinc-600 text-sm mt-2">AI will detect and fix security issues instantly</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
-          </div>
+          </motion.div>
+        )}
+
+        {/* Repository Scanner Tab */}
+        {activeTab === "repo" && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <AnimatedCard gradient className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-blue-500/30">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-blue-500/20 rounded-2xl">
+                  <FaGithub className="text-4xl text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold">Scan GitHub Repository</h2>
+                  <p className="text-zinc-400 text-sm">AI-powered security analysis for any public repository</p>
+                </div>
+              </div>
+
+              <form onSubmit={handleScanRepo} className="flex flex-col md:flex-row gap-4 mb-6">
+                <input
+                  type="text"
+                  placeholder="https://github.com/owner/repository"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                  className="flex-1 bg-black/50 border border-zinc-700 rounded-xl px-6 py-4 outline-none focus:border-blue-500 transition-all"
+                />
+                <GlowButton
+                  type="submit"
+                  variant="secondary"
+                  disabled={scanning}
+                  icon={scanning ? null : <ShieldCheckIcon />}
+                >
+                  {scanning ? "Scanning..." : "Scan Repository"}
+                </GlowButton>
+              </form>
+
+              {/* Scan Results */}
+              <AnimatePresence>
+                {scanning && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="flex justify-center py-12"
+                  >
+                    <LoadingSpinner size="lg" text="Scanning repository files..." />
+                  </motion.div>
+                )}
+
+                {scanResult && !scanning && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-black/50 rounded-2xl p-6 border border-zinc-800"
+                  >
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                      <div>
+                        <h3 className="font-bold text-xl mb-1">
+                          {scanResult.owner}/{scanResult.repo}
+                        </h3>
+                        <p className="text-zinc-500 text-sm">{scanResult.scannedFiles} files analyzed</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-center">
+                          <p className="text-xs text-zinc-400 mb-1">Security Score</p>
+                          <p className={`text-4xl font-black ${scanResult.overallScore >= 70 ? "text-green-400" : "text-yellow-400"}`}>
+                            {scanResult.overallScore}
+                          </p>
+                        </div>
+                        <SeverityBadge severity={scanResult.riskLevel} size="lg" />
+                      </div>
+                    </div>
+
+                    {/* Severity Distribution */}
+                    <div className="flex flex-wrap gap-3 mb-6">
+                      {Object.entries(scanResult.severityBreakdown || {}).map(([severity, count]) => (
+                        <div key={severity} className="flex items-center gap-2">
+                          <SeverityBadge severity={severity} size="sm" />
+                          <span className="text-sm text-zinc-400">{count}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Top Issues */}
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-400 mb-3">Top Vulnerabilities:</p>
+                      <div className="space-y-3">
+                        {scanResult.reports?.slice(0, 3).map((report, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                            className="flex items-start gap-3 bg-zinc-900/50 rounded-xl p-4"
+                          >
+                            <SeverityBadge severity={report.severity} size="sm" />
+                            <div className="flex-1">
+                              <p className="font-mono text-sm text-green-400 mb-1">{report.fileName}</p>
+                              <p className="text-sm text-zinc-400">{report.review}</p>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </AnimatedCard>
+          </motion.div>
         )}
       </div>
     </div>

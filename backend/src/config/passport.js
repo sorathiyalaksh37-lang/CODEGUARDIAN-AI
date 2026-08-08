@@ -2,14 +2,20 @@ import passport from "passport";
 import { Strategy as GitHubStrategy } from "passport-github2";
 import User from "../models/User.js";
 
-passport.use(
-  new GitHubStrategy(
-    {
-      clientID: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: "http://localhost:8000/api/auth/github/callback",
-      passReqToCallback: true,
-    },
+// Only configure GitHub OAuth if valid credentials are provided
+if (process.env.GITHUB_CLIENT_ID && 
+    process.env.GITHUB_CLIENT_SECRET && 
+    process.env.GITHUB_CLIENT_ID !== 'placeholder_client_id' &&
+    process.env.GITHUB_CLIENT_ID !== 'your_github_client_id_here') {
+  
+  passport.use(
+    new GitHubStrategy(
+      {
+        clientID: process.env.GITHUB_CLIENT_ID,
+        clientSecret: process.env.GITHUB_CLIENT_SECRET,
+        callbackURL: "http://localhost:8000/api/auth/github/callback",
+        passReqToCallback: true,
+      },
     async (req, accessToken, refreshToken, profile, done) => {
       try {
         console.log("GitHub Profile:", profile);
@@ -55,6 +61,12 @@ passport.use(
     }
   )
 );
+  
+  console.log("✓ GitHub OAuth configured successfully");
+} else {
+  console.log("⚠️  GitHub OAuth not configured (using placeholder credentials)");
+  console.log("   To enable GitHub login, add your GitHub OAuth credentials to .env file");
+}
 
 passport.serializeUser((user, done) => {
   done(null, user.id);

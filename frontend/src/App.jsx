@@ -1,5 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
@@ -39,6 +40,7 @@ const App = () => {
 
         <Routes>
           {/* PUBLIC ROUTES */}
+          <Route path="/" element={token ? <Navigate to="/dashboard" /> : <LandingPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
@@ -47,7 +49,6 @@ const App = () => {
           <Route
             element={token ? <MainLayout /> : <Navigate to="/login" />}
           >
-            <Route path="/" element={<Navigate to="/dashboard" />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/history" element={<History />} />
             <Route path="/scan-report" element={<ScanReport />} />
@@ -60,7 +61,7 @@ const App = () => {
           </Route>
 
           {/* FALLBACK */}
-          <Route path="*" element={<Navigate to={token ? "/dashboard" : "/login"} />} />
+          <Route path="*" element={<Navigate to={token ? "/dashboard" : "/"} />} />
         </Routes>
       </BrowserRouter>
     </NotificationProvider>
